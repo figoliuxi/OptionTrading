@@ -2,7 +2,7 @@
 """
 Created on Thu Dec  6 16:46:37 2018
 This is the package that deal with BSM model
-@author: Figo Liu
+@author:
 """
 
 from __future__ import division 
@@ -11,13 +11,15 @@ from scipy.stats import norm
 from scipy.optimize import newton
 from AssetClass import *
 
-def calcPriceFromVol(EqOption, r, sigma, q=0.,requireGreeks=False):
+def calcPriceFromVol(EqOption, r,requireGreeks=False):
     """a function to calculate option price based on black-scholes model
     Type is either C or P"""
     callput = EqOption.callPut
     S0 = EqOption.underlying.price
     K = EqOption.K
     T = EqOption.T
+    q =  EqOption.underlying.dividend
+    sigma = EqOption.vol
     if callput == 'C':
         type = 1.0
     elif callput =='P':
@@ -36,19 +38,24 @@ def calcPriceFromVol(EqOption, r, sigma, q=0.,requireGreeks=False):
 
 
 
-def calcVolFromPrice( callput, S0, K, r, T, price, q=0.):
+def calcVolFromPrice(EqOption, r, price):
     """a function to calculate implied volatility based on Black-Scholes formula"""
     #if intrinsic value is bigger than option value or the price input is NaN
+    callput = EqOption.callPut
+    S0 = EqOption.underlying.price
+    K = EqOption.K
+    T = EqOption.T
+    q =  EqOption.underlying.dividend
     if (callput == 'C' and S0*np.exp(-q*T) - K*np.exp(-r*T) > price) or price == 'NaN':
         return 'NaN'
     if (callput == 'P' and K*np.exp(-r*T) - S0*np.exp(-q*T) > price) or price == 'NaN':
         return 'NaN'
     else:
         #make a sub-function only has sigma as parameter; easier to use secant method to find the root
-        def subf( sigma ):
-            return calcPriceFromVol(callput, S0, K, r, T, sigma, q)-price
+        def ObjFun( sigma ):
+            return calcPriceFromVol(EqOption, r, sigma, q)-price
         try:
-            result = newton(subf,0.2,tol=1e-4,maxiter=100)
+            result = newton(ObjFun,0.2, tol=1e-4,maxiter=100)
             if result == 'NaN':
                 print ("cannot find the volatility")
             return result
@@ -59,7 +66,12 @@ def calcVolFromPrice( callput, S0, K, r, T, price, q=0.):
 
 
 def main():
-    return calcVolFromPrice('C',100,100,0.02,1,0.5)
+    stock1 = Stock('AAPL',100,0.0)
+    vol = 0.2
+    opt1 = EqOption('opt1','C',stock1,100,1,None,vol)
+    price = calcPriceFromVol(opt1,0.02)
+    opt1.setPrice(price)
+    print (opt1.price)
 #    fileObject = open('FOZOptions.csv','rb')
 #    optsTableR = csv.reader( fileObject )
 #    #skip the header
