@@ -2,7 +2,7 @@
 """
 Created on Thu Dec  6 16:46:37 2018
 This is the package that deal with BSM model
-@author:
+@author: Figo Liu
 """
 
 from __future__ import division 
